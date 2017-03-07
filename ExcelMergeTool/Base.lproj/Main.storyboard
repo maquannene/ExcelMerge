@@ -699,7 +699,7 @@
                                 </buttonCell>
                             </button>
                             <button verticalHuggingPriority="750" translatesAutoresizingMaskIntoConstraints="NO" id="3jH-vb-zXD">
-                                <rect key="frame" x="14" y="183" width="125" height="31"/>
+                                <rect key="frame" x="14" y="123" width="125" height="31"/>
                                 <constraints>
                                     <constraint firstAttribute="height" constant="20" id="zpc-Tb-1iA"/>
                                 </constraints>
@@ -712,7 +712,7 @@
                                 </connections>
                             </button>
                             <button verticalHuggingPriority="750" translatesAutoresizingMaskIntoConstraints="NO" id="Oam-cM-uwz">
-                                <rect key="frame" x="14" y="142" width="112" height="32"/>
+                                <rect key="frame" x="14" y="82" width="112" height="32"/>
                                 <constraints>
                                     <constraint firstAttribute="width" constant="100" id="XnV-Pi-tl2"/>
                                 </constraints>
@@ -732,7 +732,7 @@
                             <constraint firstItem="Oam-cM-uwz" firstAttribute="top" secondItem="3jH-vb-zXD" secondAttribute="bottom" constant="20" id="pIn-Bh-VBf"/>
                             <constraint firstItem="3jH-vb-zXD" firstAttribute="leading" secondItem="m2S-Jp-Qdl" secondAttribute="leading" constant="20" id="uET-57-Omx"/>
                             <constraint firstItem="Oam-cM-uwz" firstAttribute="leading" secondItem="m2S-Jp-Qdl" secondAttribute="leading" constant="20" id="wZL-cU-VQF"/>
-                            <constraint firstItem="3jH-vb-zXD" firstAttribute="top" secondItem="zdV-ob-T7D" secondAttribute="bottom" constant="20" id="yyI-4F-inC"/>
+                            <constraint firstItem="3jH-vb-zXD" firstAttribute="top" secondItem="zdV-ob-T7D" secondAttribute="bottom" constant="80" id="yyI-4F-inC"/>
                         </constraints>
                     </view>
                     <connections>

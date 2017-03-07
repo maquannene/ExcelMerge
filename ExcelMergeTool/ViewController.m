@@ -13,16 +13,16 @@
 static NSString * const kChooseInputFile = @"Choose Input File";
 static NSString * const kChooseOutputFile = @"Choose Output File";
 
-@interface ViewController () <NSOpenSavePanelDelegate>
+@interface ViewController () <NSOpenSavePanelDelegate, NSTextFieldDelegate>
 
 {
     __weak IBOutlet NSButton *_chooseInputBtn;
     __weak IBOutlet NSButton *_chooseOutputBtn;
-    __strong NSText *_inputText;
-    __strong NSText *_outputText;
+    __strong NSTextField *_inputTextField;
+    __strong NSTextField *_outputTextField;
     
     __strong NSOpenPanel *_openPanel;
-    NSURL *_inputFileURL;
+    NSArray<NSURL *> *_inputFileURLs;
     NSURL *_outFileURL;
 }
 
@@ -33,24 +33,26 @@ static NSString * const kChooseOutputFile = @"Choose Output File";
 - (void)viewDidLoad {
     [super viewDidLoad];
     
-    _inputText = [[NSText alloc] initWithFrame:CGRectZero];
-    _inputText.editable = NO;
-    [self.view addSubview:_inputText];
-    [_inputText mas_makeConstraints:^(MASConstraintMaker *make) {
+    _inputTextField = [[NSTextField alloc] initWithFrame:CGRectZero];
+    _inputTextField.editable = NO;
+    _inputTextField.selectable = YES;
+    
+    [self.view addSubview:_inputTextField];
+    [_inputTextField mas_makeConstraints:^(MASConstraintMaker *make) {
         make.top.equalTo(_chooseInputBtn);
+        make.bottom.lessThanOrEqualTo(_chooseOutputBtn.mas_top).offset(-20);
         make.left.equalTo(_chooseInputBtn.mas_right).offset(20);
         make.right.equalTo(self.view).offset(-20);
-        make.height.lessThanOrEqualTo(@20);
     }];
     
-    _outputText = [[NSText alloc] initWithFrame:CGRectZero];
-    _outputText.editable = NO;
-    [self.view addSubview:_outputText];
-    [_outputText mas_makeConstraints:^(MASConstraintMaker *make) {
+    _outputTextField = [[NSTextField alloc] initWithFrame:CGRectZero];
+    _outputTextField.editable = NO;
+    _outputTextField.selectable = YES;
+    [self.view addSubview:_outputTextField];
+    [_outputTextField mas_makeConstraints:^(MASConstraintMaker *make) {
         make.top.equalTo(_chooseOutputBtn);
         make.left.equalTo(_chooseOutputBtn.mas_right).offset(20);
         make.right.equalTo(self.view).offset(-20);
-        make.height.lessThanOrEqualTo(@20);
     }];
 }
 
@@ -59,7 +61,7 @@ static NSString * const kChooseOutputFile = @"Choose Output File";
     _openPanel.title = kChooseInputFile;
     _openPanel.allowsMultipleSelection = YES;
     _openPanel.canChooseFiles = YES;
-    _openPanel.canChooseDirectories = YES;
+    _openPanel.canChooseDirectories = NO;
     _openPanel.delegate = self;
     [_openPanel beginWithCompletionHandler:^(NSInteger result) {
         
@@ -85,12 +87,16 @@ static NSString * const kChooseOutputFile = @"Choose Output File";
         openPanel = (NSOpenPanel *)sender;
     }
     if ([openPanel.title isEqualToString:kChooseInputFile]) {
-        _inputFileURL = openPanel.URLs.firstObject;
-        _inputText.string = _inputFileURL.path;
+        _inputFileURLs = openPanel.URLs;
+        NSMutableString *paths = [NSMutableString new];
+        [_inputFileURLs enumerateObjectsUsingBlock:^(NSURL * _Nonnull obj, NSUInteger idx, BOOL * _Nonnull stop) {
+            [paths appendString:[NSString stringWithFormat:@"%@\n", obj.path]];
+        }];
+        _inputTextField.stringValue = paths;
     }
     if ([openPanel.title isEqualToString:kChooseOutputFile]) {
         _outFileURL = openPanel.URLs.firstObject;
-        _outputText.string = _outFileURL.path;
+        _outputTextField.stringValue = _outFileURL.path;
     }
     return YES;
 }
@@ -100,47 +106,51 @@ static NSString * const kChooseOutputFile = @"Choose Output File";
     SheetHandle outputSheetHandle = xlBookGetSheet(outputBookHandle, 0);
     NSMutableArray<NSString *> *keysArray = [[self class] titleArrayWithSheetHandle:outputSheetHandle];
 
-    BookHandle inputBookHandle = [[self class] bookHandleFilePath:_inputFileURL.path];
-    NSMutableArray<NSDictionary *> *sheetsArray = @[].mutableCopy;
-    int sheetCount = xlBookSheetCount(inputBookHandle);
-    for (int sheetIndex = 0; sheetIndex < sheetCount; sheetIndex++) {
-        SheetHandle sheetHandle = xlBookGetSheet(inputBookHandle, sheetIndex);
-        int sheetRowCount = xlSheetLastRow(sheetHandle);
-        NSMutableDictionary *sheetDic = @{}.mutableCopy;
-        for (int row = 0; row < sheetRowCount; row++) {
-            const char *cKey = xlSheetReadStr(sheetHandle, row, 0, NULL);
-            if (cKey != NULL) {
-                NSString *key = [NSString stringWithUTF8String:cKey];
-                if ([[key substringFromIndex:key.length - 1] isEqualToString:@":"]) {
-                    key = [key substringToIndex:key.length - 1];
-                }
-                if ([key isEqualToString:@"IMEI"]) {
-                    NSLog(@"123");
-                }
-                if ([keysArray containsObject:key]) {
-                    const char *cValue = xlSheetReadStr(sheetHandle, row, 1, NULL);
-                    if (cValue != NULL) {
-                        NSString *value = [NSString stringWithUTF8String:cValue];
-                        [sheetDic setValue:value forKey:key];
+    [_inputFileURLs enumerateObjectsUsingBlock:^(NSURL * _Nonnull obj, NSUInteger idx, BOOL * _Nonnull stop) {
+        BookHandle inputBookHandle = [[self class] bookHandleFilePath:obj.path];
+        NSMutableArray<NSDictionary *> *sheetsArray = @[].mutableCopy;
+        int sheetCount = xlBookSheetCount(inputBookHandle);
+        for (int sheetIndex = 0; sheetIndex < sheetCount; sheetIndex++) {
+            SheetHandle sheetHandle = xlBookGetSheet(inputBookHandle, sheetIndex);
+            int sheetRowCount = xlSheetLastRow(sheetHandle);
+            NSMutableDictionary *sheetDic = @{}.mutableCopy;
+            for (int row = 0; row < sheetRowCount; row++) {
+                const char *cKey = xlSheetReadStr(sheetHandle, row, 0, NULL);
+                if (cKey != NULL) {
+                    NSString *key = [NSString stringWithUTF8String:cKey];
+                    if ([[key substringFromIndex:key.length - 1] isEqualToString:@":"]) {
+                        key = [key substringToIndex:key.length - 1];
+                    }
+                    if ([key isEqualToString:@"IMEI"]) {
+                        NSLog(@"123");
+                    }
+                    if ([keysArray containsObject:key]) {
+                        const char *cValue = xlSheetReadStr(sheetHandle, row, 1, NULL);
+                        if (cValue != NULL) {
+                            NSString *value = [NSString stringWithUTF8String:cValue];
+                            [sheetDic setValue:value forKey:key];
+                        }
                     }
                 }
             }
-        }
-        if (sheetDic.allKeys.count > 0) {
-            [sheetsArray addObject:sheetDic];
-        }
-    }
-    
-    __block int rowCount = xlSheetLastRowA(outputSheetHandle);
-    [sheetsArray enumerateObjectsUsingBlock:^(NSDictionary * _Nonnull keyValueDic, NSUInteger idx, BOOL * _Nonnull stop) {
-        [keysArray enumerateObjectsUsingBlock:^(NSString * _Nonnull key, NSUInteger col, BOOL * _Nonnull stop) {
-            if ([[key substringFromIndex:key.length - 1] isEqualToString:@":"]) {
-                key = [key substringToIndex:key.length - 1];
+            if (sheetDic.allKeys.count > 0) {
+                [sheetsArray addObject:sheetDic];
             }
-            NSString *value = keyValueDic[key];
-            xlSheetWriteStr(outputSheetHandle, rowCount, (int)col + 1, [value UTF8String], NULL);
+        }
+        
+        __block int rowCount = xlSheetLastRowA(outputSheetHandle);
+        [sheetsArray enumerateObjectsUsingBlock:^(NSDictionary * _Nonnull keyValueDic, NSUInteger idx, BOOL * _Nonnull stop) {
+            [keysArray enumerateObjectsUsingBlock:^(NSString * _Nonnull key, NSUInteger col, BOOL * _Nonnull stop) {
+                if ([[key substringFromIndex:key.length - 1] isEqualToString:@":"]) {
+                    key = [key substringToIndex:key.length - 1];
+                }
+                NSString *value = keyValueDic[key];
+                xlSheetWriteStr(outputSheetHandle, rowCount, (int)col + 1, [value UTF8String], NULL);
+            }];
+            rowCount++;
         }];
-        rowCount++;
+        
+        xlBookRelease(inputBookHandle);
     }];
     
     //  填充头部的列
@@ -150,10 +160,9 @@ static NSString * const kChooseOutputFile = @"Choose Output File";
         xlSheetWriteStr(outputSheetHandle, 1, (int)idx + 1, [obj UTF8String], NULL);
     }];
 
-    [[self class] saveBookHandle:outputBookHandle withName:@"new.xlsx"];
+    [[self class] saveBookHandle:outputBookHandle withFlePath:_outFileURL.path];
     
     xlBookRelease(outputBookHandle);
-    xlBookRelease(inputBookHandle);
 }
 
 + (NSMutableArray *)titleArrayWithSheetHandle:(SheetHandle)sheetHandle
@@ -171,9 +180,10 @@ static NSString * const kChooseOutputFile = @"Choose Output File";
 }
 
 + (void)saveBookHandle:(BookHandle)bookhandle
-              withName:(NSString *)name
+           withFlePath:(NSString *)filePath
 {
-    xlBookSaveA(bookhandle, [[self filePathWithName:name] UTF8String]);
+    NSString *path = [NSString stringWithFormat:@"%@_merge.%@", filePath.stringByDeletingPathExtension, filePath.pathExtension];
+    xlBookSaveA(bookhandle, [path UTF8String]);
 }
 
 + (BookHandle)bookHandleFilePath:(NSString *)filePath
@@ -189,13 +199,6 @@ static NSString * const kChooseOutputFile = @"Choose Output File";
     
     xlBookLoad(handle, [filePath UTF8String]);
     return handle;
-}
-
-+ (NSString *)filePathWithName:(NSString *)name
-{
-    NSString *documentPath = [NSSearchPathForDirectoriesInDomains(NSDocumentDirectory,NSUserDomainMask, YES) objectAtIndex:0];
-    NSString *filePath = [documentPath stringByAppendingPathComponent:name];
-    return filePath;
 }
 
 @end
