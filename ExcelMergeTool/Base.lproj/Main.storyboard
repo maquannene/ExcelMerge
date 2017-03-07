@@ -1,7 +1,8 @@
-<?xml version="1.0" encoding="UTF-8" standalone="no"?>
-<document type="com.apple.InterfaceBuilder3.Cocoa.Storyboard.XIB" version="3.0" toolsVersion="11134" systemVersion="15F34" targetRuntime="MacOSX.Cocoa" propertyAccessControl="none" useAutolayout="YES" initialViewController="B8D-0N-5wS">
+<?xml version="1.0" encoding="UTF-8"?>
+<document type="com.apple.InterfaceBuilder3.Cocoa.Storyboard.XIB" version="3.0" toolsVersion="11762" systemVersion="16D32" targetRuntime="MacOSX.Cocoa" propertyAccessControl="none" useAutolayout="YES" initialViewController="B8D-0N-5wS">
     <dependencies>
-        <plugIn identifier="com.apple.InterfaceBuilder.CocoaPlugin" version="11134"/>
+        <plugIn identifier="com.apple.InterfaceBuilder.CocoaPlugin" version="11762"/>
+        <capability name="documents saved in the Xcode 8 format" minToolsVersion="8.0"/>
     </dependencies>
     <scenes>
         <!--Application-->
@@ -653,7 +654,7 @@
                         <outlet property="delegate" destination="Voe-Tx-rLC" id="PrD-fu-P6m"/>
                     </connections>
                 </application>
-                <customObject id="Voe-Tx-rLC" customClass="AppDelegate" customModuleProvider=""/>
+                <customObject id="Voe-Tx-rLC" customClass="AppDelegate"/>
                 <customObject id="Ady-hI-5gd" userLabel="First Responder" customClass="NSResponder" sceneMemberID="firstResponder"/>
             </objects>
             <point key="canvasLocation" x="75" y="0.0"/>
@@ -679,15 +680,70 @@
         <!--View Controller-->
         <scene sceneID="hIz-AP-VOD">
             <objects>
-                <viewController id="XfG-lQ-9wD" customClass="ViewController" customModuleProvider="" sceneMemberID="viewController">
+                <viewController id="XfG-lQ-9wD" customClass="ViewController" sceneMemberID="viewController">
                     <view key="view" wantsLayer="YES" id="m2S-Jp-Qdl">
                         <rect key="frame" x="0.0" y="0.0" width="480" height="270"/>
                         <autoresizingMask key="autoresizingMask"/>
+                        <subviews>
+                            <button verticalHuggingPriority="750" translatesAutoresizingMaskIntoConstraints="NO" id="zdV-ob-T7D">
+                                <rect key="frame" x="14" y="223" width="125" height="31"/>
+                                <constraints>
+                                    <constraint firstAttribute="height" constant="20" id="Gi7-9r-tfi"/>
+                                </constraints>
+                                <buttonCell key="cell" type="push" title="Choose Input" bezelStyle="rounded" alignment="center" borderStyle="border" imageScaling="proportionallyDown" inset="2" id="nlu-Xo-Tq9">
+                                    <behavior key="behavior" pushIn="YES" lightByBackground="YES" lightByGray="YES"/>
+                                    <font key="font" metaFont="system"/>
+                                    <connections>
+                                        <action selector="chooseInputAction:" target="XfG-lQ-9wD" id="3fP-ZM-Ols"/>
+                                    </connections>
+                                </buttonCell>
+                            </button>
+                            <button verticalHuggingPriority="750" translatesAutoresizingMaskIntoConstraints="NO" id="3jH-vb-zXD">
+                                <rect key="frame" x="14" y="183" width="125" height="31"/>
+                                <constraints>
+                                    <constraint firstAttribute="height" constant="20" id="zpc-Tb-1iA"/>
+                                </constraints>
+                                <buttonCell key="cell" type="push" title="Chose Output" bezelStyle="rounded" alignment="center" borderStyle="border" imageScaling="proportionallyDown" inset="2" id="773-dw-Qh8">
+                                    <behavior key="behavior" pushIn="YES" lightByBackground="YES" lightByGray="YES"/>
+                                    <font key="font" metaFont="system"/>
+                                </buttonCell>
+                                <connections>
+                                    <action selector="chooseOutputAction:" target="XfG-lQ-9wD" id="IXH-AK-yvM"/>
+                                </connections>
+                            </button>
+                            <button verticalHuggingPriority="750" translatesAutoresizingMaskIntoConstraints="NO" id="Oam-cM-uwz">
+                                <rect key="frame" x="14" y="142" width="112" height="32"/>
+                                <constraints>
+                                    <constraint firstAttribute="width" constant="100" id="XnV-Pi-tl2"/>
+                                </constraints>
+                                <buttonCell key="cell" type="push" title="Merge" bezelStyle="rounded" alignment="center" borderStyle="border" imageScaling="proportionallyDown" inset="2" id="8Ec-BB-gmf">
+                                    <behavior key="behavior" pushIn="YES" lightByBackground="YES" lightByGray="YES"/>
+                                    <font key="font" metaFont="system"/>
+                                </buttonCell>
+                                <connections>
+                                    <action selector="readExcel:" target="XfG-lQ-9wD" id="V13-YW-h9T"/>
+                                </connections>
+                            </button>
+                        </subviews>
+                        <constraints>
+                            <constraint firstItem="zdV-ob-T7D" firstAttribute="leading" secondItem="m2S-Jp-Qdl" secondAttribute="leading" constant="20" id="RE8-hq-BMZ"/>
+                            <constraint firstItem="zdV-ob-T7D" firstAttribute="top" secondItem="m2S-Jp-Qdl" secondAttribute="top" constant="20" id="lrf-fJ-7O4"/>
+                            <constraint firstItem="3jH-vb-zXD" firstAttribute="width" secondItem="zdV-ob-T7D" secondAttribute="width" id="lwH-Qr-3Wq"/>
+                            <constraint firstItem="Oam-cM-uwz" firstAttribute="top" secondItem="3jH-vb-zXD" secondAttribute="bottom" constant="20" id="pIn-Bh-VBf"/>
+                            <constraint firstItem="3jH-vb-zXD" firstAttribute="leading" secondItem="m2S-Jp-Qdl" secondAttribute="leading" constant="20" id="uET-57-Omx"/>
+                            <constraint firstItem="Oam-cM-uwz" firstAttribute="leading" secondItem="m2S-Jp-Qdl" secondAttribute="leading" constant="20" id="wZL-cU-VQF"/>
+                            <constraint firstItem="3jH-vb-zXD" firstAttribute="top" secondItem="zdV-ob-T7D" secondAttribute="bottom" constant="20" id="yyI-4F-inC"/>
+                        </constraints>
                     </view>
+                    <connections>
+                        <outlet property="_chooseInputBtn" destination="zdV-ob-T7D" id="YQE-PO-ROD"/>
+                        <outlet property="_chooseOutputBtn" destination="3jH-vb-zXD" id="NwA-Zw-D67"/>
+                        <outlet property="chooseInputBtn" destination="zdV-ob-T7D" id="o1c-1j-hNy"/>
+                    </connections>
                 </viewController>
                 <customObject id="rPt-NT-nkU" userLabel="First Responder" customClass="NSResponder" sceneMemberID="firstResponder"/>
             </objects>
-            <point key="canvasLocation" x="75" y="655"/>
+            <point key="canvasLocation" x="-42" y="663"/>
         </scene>
     </scenes>
 </document>
