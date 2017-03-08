@@ -102,28 +102,50 @@ static NSString * const kChooseOutputFile = @"Choose Output File";
 }
 
 - (IBAction)readExcel:(id)sender {
+    
+    if (_inputFileURLs.count == 0 ||
+        _outFileURL.path.length == 0) {
+        return;
+    }
+    
+    //  输出 BookHandle
     BookHandle outputBookHandle = [[self class] bookHandleFilePath:_outFileURL.path];
     SheetHandle outputSheetHandle = xlBookGetSheet(outputBookHandle, 0);
+    
+    //  读取输出 keyArray
     NSMutableArray<NSString *> *keysArray = [[self class] titleArrayWithSheetHandle:outputSheetHandle];
 
+    //  遍历多个 url
     [_inputFileURLs enumerateObjectsUsingBlock:^(NSURL * _Nonnull obj, NSUInteger idx, BOOL * _Nonnull stop) {
-        BookHandle inputBookHandle = [[self class] bookHandleFilePath:obj.path];
-        NSMutableArray<NSDictionary *> *sheetsArray = @[].mutableCopy;
-        int sheetCount = xlBookSheetCount(inputBookHandle);
+        //  读取 book 的基础数据
+        BookHandle tInputBookHandle = [[self class] bookHandleFilePath:obj.path];
+        NSMutableArray<NSDictionary *> *sheetsDicArray = @[].mutableCopy;
+        int sheetCount = xlBookSheetCount(tInputBookHandle);
+        xlBookRelease(tInputBookHandle);    //  这里用完就关掉
+        
+        //  遍历 book 中每一个 sheet
         for (int sheetIndex = 0; sheetIndex < sheetCount; sheetIndex++) {
-            SheetHandle sheetHandle = xlBookGetSheet(inputBookHandle, sheetIndex);
+            
+            //  由于试用版 sdk 有问题，每个 book 只能读出来 3 个 sheet，所以每次读取 sheet 都重新打开 book
+            BookHandle bookHandle = [[self class] bookHandleFilePath:obj.path];
+            SheetHandle sheetHandle = xlBookGetSheet(bookHandle, sheetIndex);
+            
             int sheetRowCount = xlSheetLastRow(sheetHandle);
+            BOOL beginSearchHSG = NO;
+            
+            //  数据
             NSMutableDictionary *sheetDic = @{}.mutableCopy;
+            
             for (int row = 0; row < sheetRowCount; row++) {
+                //  读取第 0 行的所有 key
                 const char *cKey = xlSheetReadStr(sheetHandle, row, 0, NULL);
                 if (cKey != NULL) {
+                    //  去掉 ：
                     NSString *key = [NSString stringWithUTF8String:cKey];
                     if ([[key substringFromIndex:key.length - 1] isEqualToString:@":"]) {
                         key = [key substringToIndex:key.length - 1];
                     }
-                    if ([key isEqualToString:@"IMEI"]) {
-                        NSLog(@"123");
-                    }
+                    //  存在于 keysArray 的 key，就读取 value，加入到 dic 中
                     if ([keysArray containsObject:key]) {
                         const char *cValue = xlSheetReadStr(sheetHandle, row, 1, NULL);
                         if (cValue != NULL) {
@@ -131,33 +153,45 @@ static NSString * const kChooseOutputFile = @"Choose Output File";
                             [sheetDic setValue:value forKey:key];
                         }
                     }
+                    
+                    if (beginSearchHSG) {
+                        NSString *key = [[self class] stringWithSheetHandle:sheetHandle row:row col:8];
+                        if ([key containsString:@"HSG"]) {
+                            NSString *value = [[self class] stringWithSheetHandle:sheetHandle row:row col:3];
+                            if (value) {
+                                sheetDic[@"HSG"] = value;
+                            }
+                        }
+                    }
+                    
+                    if ([key containsString:@"Timestamp"]) {
+                        beginSearchHSG = YES;
+                    }
                 }
             }
+            
+            //  dicInfo 塞入 sheetsDicArray
             if (sheetDic.allKeys.count > 0) {
-                [sheetsArray addObject:sheetDic];
+                [sheetsDicArray addObject:sheetDic];
             }
+            
+            xlBookRelease(bookHandle);
         }
         
-        __block int rowCount = xlSheetLastRowA(outputSheetHandle);
-        [sheetsArray enumerateObjectsUsingBlock:^(NSDictionary * _Nonnull keyValueDic, NSUInteger idx, BOOL * _Nonnull stop) {
+        //  将一个 book 中提取的数据，写入 outputSheetHandle 中
+        __block int rowCount = xlSheetLastRow(outputSheetHandle);
+        [sheetsDicArray enumerateObjectsUsingBlock:^(NSDictionary * _Nonnull keyValueDic, NSUInteger idx, BOOL * _Nonnull stop) {
             [keysArray enumerateObjectsUsingBlock:^(NSString * _Nonnull key, NSUInteger col, BOOL * _Nonnull stop) {
                 if ([[key substringFromIndex:key.length - 1] isEqualToString:@":"]) {
                     key = [key substringToIndex:key.length - 1];
                 }
                 NSString *value = keyValueDic[key];
-                xlSheetWriteStr(outputSheetHandle, rowCount, (int)col + 1, [value UTF8String], NULL);
+                if (value) {
+                    xlSheetWriteStr(outputSheetHandle, rowCount, (int)col + 1, [value UTF8String], NULL);
+                }
             }];
             rowCount++;
         }];
-        
-        xlBookRelease(inputBookHandle);
-    }];
-    
-    //  填充头部的列
-    xlSheetInsertRow(outputSheetHandle, 1, 1);
-    
-    [keysArray enumerateObjectsUsingBlock:^(NSString * _Nonnull obj, NSUInteger idx, BOOL * _Nonnull stop) {
-        xlSheetWriteStr(outputSheetHandle, 1, (int)idx + 1, [obj UTF8String], NULL);
     }];
 
     [[self class] saveBookHandle:outputBookHandle withFlePath:_outFileURL.path];
@@ -165,12 +199,23 @@ static NSString * const kChooseOutputFile = @"Choose Output File";
     xlBookRelease(outputBookHandle);
 }
 
++ (NSString *)stringWithSheetHandle:(SheetHandle)sheetHandle
+                                row:(int)row
+                                col:(int)col
+{
+    const char *cValue = xlSheetReadStr(sheetHandle, row, col, NULL);
+    if (cValue != NULL) {
+        return [NSString stringWithUTF8String:cValue];
+    }
+    return nil;
+}
+
 + (NSMutableArray *)titleArrayWithSheetHandle:(SheetHandle)sheetHandle
 {
     NSMutableArray *titleArray = @[].mutableCopy;
     int colCount = xlSheetLastColA(sheetHandle);
     for (int col = 1; col < colCount; col++) {
-        const char * cTitle = xlSheetReadStr(sheetHandle, 0, col, NULL);
+        const char * cTitle = xlSheetReadStr(sheetHandle, 1, col, NULL);
         if (cTitle != NULL) {
             NSString *title = [NSString stringWithUTF8String:cTitle];
             [titleArray addObject:title];
@@ -182,7 +227,10 @@ static NSString * const kChooseOutputFile = @"Choose Output File";
 + (void)saveBookHandle:(BookHandle)bookhandle
            withFlePath:(NSString *)filePath
 {
-    NSString *path = [NSString stringWithFormat:@"%@_merge.%@", filePath.stringByDeletingPathExtension, filePath.pathExtension];
+    NSDateFormatter *dateFormat = [[NSDateFormatter alloc] init];
+    [dateFormat setDateFormat:@"yyyyMMddhhmmss"];
+    NSString *dateString = [dateFormat stringFromDate:[NSDate date]];
+    NSString *path = [NSString stringWithFormat:@"%@_%@.%@", filePath.stringByDeletingPathExtension, dateString, filePath.pathExtension];
     xlBookSaveA(bookhandle, [path UTF8String]);
 }
 
