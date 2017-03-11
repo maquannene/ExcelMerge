@@ -13,8 +13,14 @@
 static NSString * const kChooseInputFile = @"Choose Input File";
 static NSString * const kChooseOutputFile = @"Choose Output File";
 
-//static NSString * const kSpecialKey1 = @"BATT_REWORK_CNT";
-static NSString 
+static NSString * const kSpecialKey1 = @"BATT_REWORK_CNT";
+
+static NSString * const kSpecialKeyFTC2 = @"Family Type Code";
+static NSString * const kSpecialKeyFTC2_col = @"Reported Failures";
+
+static NSString * const kSpecialKeyHSG = @"HSG";
+static NSString * const kSpecialKeyHSG_col = @"Timestamp";
+
 
 @interface ViewController () <NSOpenSavePanelDelegate, NSTextFieldDelegate>
 
@@ -135,6 +141,7 @@ static NSString
             
             int sheetRowCount = xlSheetLastRow(sheetHandle);
             BOOL beginSearchHSG = NO;
+//            BOOL begin
             
             //  数据
             NSMutableDictionary *sheetDic = @{}.mutableCopy;
@@ -151,37 +158,39 @@ static NSString
                     //  存在于 keysArray 的 key，就读取 value，加入到 dic 中
                     if ([keysArray containsObject:key]) {
                         const char *cValue = NULL;
-//                        FormatHandle format = NULL;
                         //  特殊处理
-//                        if ([key isEqualToString:kSpecialKey1]) {
-//                            cValue = xlSheetReadStr(sheetHandle, row, 2, NULL);
-//                            format = xlSheetCellFormat(sheetHandle, row, 2);
-//                        }
-//                        else {
+                        if ([key isEqualToString:kSpecialKey1]) {
+                            cValue = xlSheetReadStr(sheetHandle, row, 2, NULL);
+                        }
+                        else {
                             cValue = xlSheetReadStr(sheetHandle, row, 1, NULL);
-//                        }
+                        }
                         
                         if (cValue != NULL) {
                             NSString *value = [NSString stringWithUTF8String:cValue];
                             sheetDic[key] = @{@"String" : value}.mutableCopy;
                         }
-                        
-//                        if (format != NULL) {
-//                            sheetDic[key][@"Format"] = [NSValue valueWithBytes:&format objCType:@encode(FormatHandle)];
-//                        }
+
                     }
-                    
+
+                    if ([key isEqualToString:kSpecialKeyFTC2_col]) {
+                        NSString *value = [[self class] stringWithSheetHandle:sheetHandle row:row col:3];
+                        if (value) {
+                            sheetDic[kSpecialKeyFTC2] = @{@"String" : value};
+                        }
+                    }
+
                     if (beginSearchHSG) {
                         NSString *key = [[self class] stringWithSheetHandle:sheetHandle row:row col:8];
-                        if ([key containsString:@"HSG"]) {
+                        if ([key containsString:kSpecialKeyHSG]) {
                             NSString *value = [[self class] stringWithSheetHandle:sheetHandle row:row col:3];
                             if (value) {
-                                sheetDic[@"HSG"] = @{@"String" : value};
+                                sheetDic[kSpecialKeyHSG] = @{@"String" : value};
                             }
                         }
                     }
                     
-                    if ([key containsString:@"Timestamp"]) {
+                    if ([key containsString:kSpecialKeyHSG_col]) {
                         beginSearchHSG = YES;
                     }
                 }
