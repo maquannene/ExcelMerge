@@ -13,6 +13,9 @@
 static NSString * const kChooseInputFile = @"Choose Input File";
 static NSString * const kChooseOutputFile = @"Choose Output File";
 
+//static NSString * const kSpecialKey1 = @"BATT_REWORK_CNT";
+static NSString 
+
 @interface ViewController () <NSOpenSavePanelDelegate, NSTextFieldDelegate>
 
 {
@@ -147,11 +150,25 @@ static NSString * const kChooseOutputFile = @"Choose Output File";
                     }
                     //  存在于 keysArray 的 key，就读取 value，加入到 dic 中
                     if ([keysArray containsObject:key]) {
-                        const char *cValue = xlSheetReadStr(sheetHandle, row, 1, NULL);
+                        const char *cValue = NULL;
+//                        FormatHandle format = NULL;
+                        //  特殊处理
+//                        if ([key isEqualToString:kSpecialKey1]) {
+//                            cValue = xlSheetReadStr(sheetHandle, row, 2, NULL);
+//                            format = xlSheetCellFormat(sheetHandle, row, 2);
+//                        }
+//                        else {
+                            cValue = xlSheetReadStr(sheetHandle, row, 1, NULL);
+//                        }
+                        
                         if (cValue != NULL) {
                             NSString *value = [NSString stringWithUTF8String:cValue];
-                            [sheetDic setValue:value forKey:key];
+                            sheetDic[key] = @{@"String" : value}.mutableCopy;
                         }
+                        
+//                        if (format != NULL) {
+//                            sheetDic[key][@"Format"] = [NSValue valueWithBytes:&format objCType:@encode(FormatHandle)];
+//                        }
                     }
                     
                     if (beginSearchHSG) {
@@ -159,7 +176,7 @@ static NSString * const kChooseOutputFile = @"Choose Output File";
                         if ([key containsString:@"HSG"]) {
                             NSString *value = [[self class] stringWithSheetHandle:sheetHandle row:row col:3];
                             if (value) {
-                                sheetDic[@"HSG"] = value;
+                                sheetDic[@"HSG"] = @{@"String" : value};
                             }
                         }
                     }
@@ -185,10 +202,15 @@ static NSString * const kChooseOutputFile = @"Choose Output File";
                 if ([[key substringFromIndex:key.length - 1] isEqualToString:@":"]) {
                     key = [key substringToIndex:key.length - 1];
                 }
-                NSString *value = keyValueDic[key];
-                if (value) {
-                    xlSheetWriteStr(outputSheetHandle, rowCount, (int)col + 1, [value UTF8String], NULL);
+                NSDictionary *value = keyValueDic[key];
+                if (value[@"String"]) {
+                    xlSheetWriteStr(outputSheetHandle, rowCount, (int)col + 1, [value[@"String"] UTF8String], NULL);
                 }
+//                if (value[@"Format"]) {
+//                    FormatHandle format;
+//                    [value[@"Format"] getValue:&format];
+//                    xlSheetSetCellFormat(outputSheetHandle, rowCount, (int)col + 1, format);
+//                }
             }];
             rowCount++;
         }];
