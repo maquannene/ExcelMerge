@@ -13,10 +13,12 @@
 static NSString * const kChooseInputFile = @"Choose Input File";
 static NSString * const kChooseOutputFile = @"Choose Output File";
 
-static NSString * const kSpecialKey1 = @"BATT_REWORK_CNT";
 
-static NSString * const kSpecialKeyFTC2 = @"Family Type Code";
-static NSString * const kSpecialKeyFTC2_col = @"Reported Failures";
+static NSString * const kSpecialKeySN = @"Sheet Name";
+static NSString * const kSpecialKeyBRC = @"BATT_REWORK_CNT";
+
+static NSString * const kSpecialKeyFTC = @"Family Type Code";
+static NSString * const kSpecialKeyFTC_col = @"Reported Failures";
 
 static NSString * const kSpecialKeyHSG = @"HSG";
 static NSString * const kSpecialKeyHSG_col = @"Timestamp";
@@ -138,13 +140,14 @@ static NSString * const kSpecialKeyHSG_col = @"Timestamp";
             //  由于试用版 sdk 有问题，每个 book 只能读出来 3 个 sheet，所以每次读取 sheet 都重新打开 book
             BookHandle bookHandle = [[self class] bookHandleFilePath:obj.path];
             SheetHandle sheetHandle = xlBookGetSheet(bookHandle, sheetIndex);
+            NSString *sheetName = [[self class] sheetNameWithSheetHandle:sheetHandle];
             
             int sheetRowCount = xlSheetLastRow(sheetHandle);
             BOOL beginSearchHSG = NO;
-//            BOOL begin
             
             //  数据
             NSMutableDictionary *sheetDic = @{}.mutableCopy;
+            sheetDic[kSpecialKeySN] = @{@"String" : sheetName};
             
             for (int row = 0; row < sheetRowCount; row++) {
                 //  读取第 0 行的所有 key
@@ -159,7 +162,7 @@ static NSString * const kSpecialKeyHSG_col = @"Timestamp";
                     if ([keysArray containsObject:key]) {
                         const char *cValue = NULL;
                         //  特殊处理
-                        if ([key isEqualToString:kSpecialKey1]) {
+                        if ([key isEqualToString:kSpecialKeyBRC]) {
                             cValue = xlSheetReadStr(sheetHandle, row, 2, NULL);
                         }
                         else {
@@ -173,13 +176,16 @@ static NSString * const kSpecialKeyHSG_col = @"Timestamp";
 
                     }
 
-                    if ([key isEqualToString:kSpecialKeyFTC2_col]) {
+                    //  special FTC
+                    if ([key isEqualToString:kSpecialKeyFTC_col]) {
                         NSString *value = [[self class] stringWithSheetHandle:sheetHandle row:row col:3];
                         if (value) {
-                            sheetDic[kSpecialKeyFTC2] = @{@"String" : value};
+                            sheetDic[kSpecialKeyFTC] = @{@"String" : value};
                         }
                     }
-
+                    
+                    
+                    //  special HSG
                     if (beginSearchHSG) {
                         NSString *key = [[self class] stringWithSheetHandle:sheetHandle row:row col:8];
                         if ([key containsString:kSpecialKeyHSG]) {
@@ -213,7 +219,7 @@ static NSString * const kSpecialKeyHSG_col = @"Timestamp";
                 }
                 NSDictionary *value = keyValueDic[key];
                 if (value[@"String"]) {
-                    xlSheetWriteStr(outputSheetHandle, rowCount, (int)col + 1, [value[@"String"] UTF8String], NULL);
+                    xlSheetWriteStr(outputSheetHandle, rowCount, (int)col, [value[@"String"] UTF8String], NULL);
                 }
 //                if (value[@"Format"]) {
 //                    FormatHandle format;
@@ -230,6 +236,12 @@ static NSString * const kSpecialKeyHSG_col = @"Timestamp";
     xlBookRelease(outputBookHandle);
 }
 
++ (NSString *)sheetNameWithSheetHandle:(SheetHandle)sheetHandle
+{
+    const char* cSheetName = xlSheetName(sheetHandle);
+    return [NSString stringWithUTF8String:cSheetName];
+}
+    
 + (NSString *)stringWithSheetHandle:(SheetHandle)sheetHandle
                                 row:(int)row
                                 col:(int)col
@@ -245,7 +257,7 @@ static NSString * const kSpecialKeyHSG_col = @"Timestamp";
 {
     NSMutableArray *titleArray = @[].mutableCopy;
     int colCount = xlSheetLastColA(sheetHandle);
-    for (int col = 1; col < colCount; col++) {
+    for (int col = 0; col < colCount; col++) {
         const char * cTitle = xlSheetReadStr(sheetHandle, 1, col, NULL);
         if (cTitle != NULL) {
             NSString *title = [NSString stringWithUTF8String:cTitle];
